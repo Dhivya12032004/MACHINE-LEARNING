@@ -1,0 +1,298 @@
+
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import os
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+import tensorflow as tf
+
+import keras
+from keras.models import Sequential
+from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
+from keras.layers import Dense, Activation, Dropout, Flatten
+
+from keras.preprocessing import image
+from keras.preprocessing.image import ImageDataGenerator
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# get the data
+filname = '/content/fer2013.csv'
+label_map = ['Anger', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+names=['emotion','pixels','usage']
+df=pd.read_csv('/content/fer2013.csv',names=names, na_filter=False)
+im=df['pixels']
+df.head(10)
+
+def getData(filename, image_size=48):  # Specify image size if known
+  Y = []
+  X = []
+  first = True
+  for line in open(filename):
+    if first:
+      first = False
+      continue  # Skip header row
+    row = line.split(',')
+    Y.append(int(row[0]))
+    pixels = [int(p) for p in row[1].split()]
+    # Validate and pad if necessary
+    if len(pixels) != image_size * image_size:
+      pixels = pixels[:image_size * image_size] + [0] * (image_size * image_size - len(pixels))  # Pad with zeros
+    X.append(pixels)
+
+  X, Y = np.array(X) / 255.0, np.array(Y)
+  return X, Y
+
+X, Y = getData(filname)
+num_class = len(set(Y))
+print(num_class)
+
+N, D = X.shape
+X = X.reshape(N, 48, 48, 1)
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.1, random_state=0)
+y_train = (np.arange(num_class) == y_train[:, None]).astype(np.float32)
+y_test = (np.arange(num_class) == y_test[:, None]).astype(np.float32)
+
+import pandas as pd
+import numpy as np
+
+# Define helper functions for data loading and preprocessing
+def load_fer2013_data(filename):
+  """Loads the FER-2013 dataset from a CSV file.
+
+  Args:
+      filename (str): Path to the CSV file containing the dataset.
+
+  Returns:
+      tuple: A tuple containing the following elements:
+          - X (np.ndarray): The image data, reshaped to a 4D tensor
+              (num_samples, height, width, channels).
+          - Y (np.ndarray): The emotion labels as one-hot encoded vectors.
+          - num_classes (int): The number of unique emotion classes.
+  """
+
+  label_map = ['Anger', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+  names = ['emotion', 'pixels', 'usage']
+  df = pd.read_csv(filename, names=names, na_filter=False)
+  im = df['pixels']
+
+  X, Y = get_data(im.values)
+  num_classes = len(set(Y))
+  return X, Y, num_classes
+
+def get_data(pixel_data):
+
+  # Assuming image size is 48x48 (modify if different)
+  image_size = 48
+
+  X = []
+  Y = []
+  for row in pixel_data:
+    pixels = [int(p) for p in row.split()]
+    # Validate and pad if necessary (ensure consistent shape)
+    if len(pixels) != image_size * image_size:
+      pixels = pixels[:image_size * image_size] + [0] * (image_size * image_size - len(pixels))
+    X.append(pixels)
+
+  X = np.array(X)
+  X = X.reshape(-1, image_size, image_size, 1)  # Reshape to 4D tensor
+  X = X.astype('float32') / 255.0  # Normalize pixel values
+
+  # Load emotion labels (assuming first column contains labels)
+  Y = pixel_data[:, 0].astype('int32')
+  # One-hot encode labels (modify if using categorical crossentropy)
+  Y = pd.get_dummies(Y).values
+
+  return X, Y
+
+# Define the CNN model architecture
+def build_cnn_model(input_shape, num_classes):
+
+  model = Sequential()
+
+  # Convolutional layers with Batch Normalization and ReLU activation
+  model.add(Conv2D(32, (3, 3), activation='relu', padding='same', input_shape=input_shape))
+  model.add(BatchNormalization())
+  model.add(MaxPooling2D(pool_size=(2, 2)))
+
+  model.add(Conv2D(64, (3, 3), activation='relu', padding='same'))
+  model.add(BatchNormalization())
+  model.add(MaxPooling2D(pool_size=(2, 2)))
+
+  model.add(Conv2D(128, (3, 3), activation='relu', padding='same'))
+  model.add(BatchNormalization())
+  model.add(MaxPooling2D(pool_size=(2, 2)))
+
+  # Flatten layer for feeding into fully-connected layers
+  model.add(Flatten())
+
+  # Fully-connected layers with Dropout for regularization
+  model.add(Dense(256, activation='relu'))
+  model.add(Dropout(0.5))
+  model.add(Dense(num_classes, activation='softmax'))
+
+  # Compile the model
+  model
+
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, BatchNormalization, Activation, MaxPooling2D, Flatten, Dense
+from tensorflow.keras.optimizers import Adam  # Import Adam optimizer
+
+# Define image dimensions (replace with your actual values)
+width = 48
+height = 48
+
+# Define the number of features (adjust as needed)
+num_features = 32
+
+# Define the number of classes (replace with the actual number of emotions)
+num_classes = 7  # Example: Happy, Sad, Angry, Surprise, Disgust, Fear, Neutral
+
+# Create the convolutional neural network model
+model = Sequential()
+
+# Module 1
+model.add(Conv2D(2 * num_features, kernel_size=(3, 3), input_shape=(width, height, 1), data_format='channels_last'))
+model.add(BatchNormalization())
+model.add(Activation('relu'))
+model.add(Conv2D(2 * num_features, kernel_size=(3, 3), padding='same'))
+model.add(BatchNormalization())
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+
+# Module 2
+model.add(Conv2D(num_features, kernel_size=(3, 3), padding='same'))
+model.add(BatchNormalization())
+model.add(Activation('relu'))
+model.add(Conv2D(num_features, kernel_size=(3, 3), padding='same'))
+model.add(BatchNormalization())
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+
+# Module 3
+model.add(Conv2D(num_features // 2, kernel_size=(3, 3), padding='same'))  # Reduce feature map depth
+model.add(BatchNormalization())
+model.add(Activation('relu'))
+model.add(Conv2D(num_features // 2, kernel_size=(3, 3), padding='same'))
+model.add(BatchNormalization())
+model.add(Activation('relu'))
+model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+
+# Flatten layer
+model.add(Flatten())
+
+# Dense layers (adjust the number of neurons as needed)
+model.add(Dense(2 * 2 * num_features))
+model.add(BatchNormalization())
+model.add(Activation('relu'))
+model.add(Dense(2 * num_features))
+model.add(BatchNormalization())
+model.add(Activation('relu'))
+model.add(Dense(num_features))
+model.add(BatchNormalization())
+model.add(Activation('relu'))
+
+# Output layer with softmax activation for multi-class classification
+model.add(Dense(num_classes, activation='softmax'))
+
+# Compile the model
+model.compile(loss='categorical_crossentropy',
+              optimizer=Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-7),
+              metrics=['accuracy'])
+
+# Print the model summary
+model.summary()
+
+
+import tensorflow as tf
+from tensorflow.keras.callbacks import EarlyStopping  # Import EarlyStopping
+
+path_model = 'model_filter.h5'  # Save model at this location after each epoch
+
+# ... (rest of your code)
+
+# Create EarlyStopping callback
+es = EarlyStopping(monitor='val_loss', patience=10, mode='min', restore_best_weights=True)
+
+# ... (use es within model.fit or model.fit_generator)
+history = model.fit(x=X_train,
+                    y=y_train,
+                    # ... other training arguments
+                    callbacks=[es])
+
+
+objects = ('angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral')
+y_pos = np.arange(len(objects))
+print(y_pos)
+
+def emotion_analysis(emotions):
+    objects = ['angry', 'disgust', 'fear', 'happy', 'sad', 'surprise', 'neutral']
+    y_pos = np.arange(len(objects))
+    plt.bar(y_pos, emotions, align='center', alpha=0.9)
+    plt.tick_params(axis='x', which='both', pad=10,width=4,length=10)
+    plt.xticks(y_pos, objects)
+    plt.ylabel('percentage')
+    plt.title('emotion')
+
+plt.show()
+
+y_pred=model.predict(X_test)
+#print(y_pred)
+y_test.shape
+
+from skimage import io
+from keras.preprocessing import image
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Define the emotion_analysis function if not already defined
+def emotion_analysis(emotion):
+    # Implementation of your emotion analysis function
+    pass
+
+# Load the image
+img = image.load_img('/content/Shawon.jpg', grayscale=True, target_size=(48, 48))
+show_img = image.load_img('/content/Shawon.jpg', grayscale=False, target_size=(200, 200))
+
+# Convert the image to a numpy array
+x = image.img_to_array(img)
+x = np.expand_dims(x, axis=0)
+
+# Normalize the image
+x /= 255
+
+# Assuming `model` is your trained model
+# custom = model.predict(x)
+# emotion_analysis(custom[0])
+
+# Assuming you already have the objects list defined
+objects = ["Angry", "Disgust", "Fear", "Happy", "Sad", "Surprise", "Neutral"]
+
+# Assuming you already have the 'model' and 'objects' defined, you can continue
+# with the code snippet you provided.
+custom = np.array([0.1, 0.2, 0.1, 0.3, 0.2, 0.05, 0.05])  # Placeholder for custom predictions
+
+print('Expression Prediction:', objects[np.argmax(custom)])
+
+x = np.array(x, 'float32')
+x = x.reshape([48, 48])
+
+plt.gray()
+plt.imshow(show_img)
+plt.show()
+
+m = 0.000000000000000000001
+a = custom
+for i in range(0, len(a)):
+    if a[i] > m:
+        m = a[i]
+        ind = i
+
+print('Expression Prediction:', objects[ind])
