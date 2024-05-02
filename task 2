@@ -1,0 +1,117 @@
+
+import os
+import glob
+import random
+import numpy as np
+import pandas as pd
+import tensorflow_addons as tfa
+import tensorflow as tf
+from tensorflow import keras
+from keras import layers
+from keras.models import Sequential
+from keras.layers import Conv2D,MaxPooling2D,Activation, Dropout, Flatten, Dense
+from keras.preprocessing.image import ImageDataGenerator
+from tqdm import tqdm
+from PIL import Image
+from keras.utils import to_categorical
+import seaborn as sns
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
+import plotly.express as px
+train_csv = pd.read_csv("Training_set.csv")
+test_csv = pd.read_csv("Testing_set.csv")
+train_fol = glob.glob(r"C:\Users\WELCOME\Downloads\archive (3)\Human Action Recognition\train") 
+test_fol = glob.glob(r"C:\Users\WELCOME\Downloads\archive (3)\Human Action Recognition\test")
+train_csv
+filename	label
+0	Image_1.jpg	sitting
+1	Image_2.jpg	using_laptop
+2	Image_3.jpg	hugging
+3	Image_4.jpg	sleeping
+4	Image_5.jpg	using_laptop
+...	...	...
+12595	Image_12596.jpg	sitting
+12596	Image_12597.jpg	clapping
+12597	Image_12598.jpg	sitting
+12598	Image_12599.jpg	dancing
+12599	Image_12600.jpg	listening_to_music
+12600 rows × 2 columns
+
+train_csv.label.value_counts()
+sitting               840
+using_laptop          840
+hugging               840
+sleeping              840
+drinking              840
+clapping              840
+dancing               840
+cycling               840
+calling               840
+laughing              840
+eating                840
+fighting              840
+listening_to_music    840
+running               840
+texting               840
+Name: label, dtype: int64
+l = train_csv.label.value_counts()
+fig = px.pie(train_csv, values=l.values, names=l.index, title='Distribution of Human Activity')
+fig.show()
+X_train = train_csv['filename']
+y_train = train_csv['label']
+img_data = []
+img_label = []
+length = len(train_fol)
+for i in (range(len(train_fol)-1)):
+    t = r'C:\Users\WELCOME\Downloads\archive (3)\Human Action Recognition\train' + X_train[i]    
+    temp_img = Image.open(t)
+    img_data.append(np.asarray(temp_img.resize((160,160))))
+    img_label.append(y_train[i])
+inp_shape = (160, 160,3)
+iii = img_data
+iii = np.asarray(iii)
+type(iii)
+numpy.ndarray
+Y_train = to_categorical(np.asarray(train_csv['label'].factorize()[0]))
+print(y_train[0])
+sitting
+vgg_model = Sequential()
+
+pretrained_model= tf.keras.applications.VGG16(include_top=False,
+                   input_shape=(160,160,3),
+                   pooling='avg',classes=15,
+                   weights='imagenet')
+
+for layer in pretrained_model.layers:
+        layer.trainable=False
+
+vgg_model.add(pretrained_model)
+vgg_model.add(Flatten())
+vgg_model.add(Dense(512, activation='relu'))
+vgg_model.add(Dense(15, activation='softmax'))
+vgg_model.compile(optimizer='adam', loss='categorical_crossentropy',metrics=['accuracy'])
+vgg_model.summary()
+Model: "sequential_1"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ vgg16 (Functional)          (None, 512)               14714688  
+                                                                 
+ flatten_1 (Flatten)         (None, 512)               0         
+                                                                 
+ dense_2 (Dense)             (None, 512)               262656    
+                                                                 
+ dense_3 (Dense)             (None, 15)                7695      
+                                                                 
+=================================================================
+Total params: 14985039 (57.16 MB)
+Trainable params: 270351 (1.03 MB)
+Non-trainable params: 14714688 (56.13 MB)
+_________________________________________________________________
+image_path = r"C:\Users\WELCOME\Downloads\archive (3)\Human Action Recognition\train\Image_120.jpg"
+image = mpimg.imread(image_path)
+plt.imshow(image)
+plt.title("Sitting")
+plt.show()
+
+ 
